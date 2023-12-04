@@ -1,5 +1,5 @@
 const fs = require('fs');
-const rSnapshot = /-SNAPSHOT(\.\d+)?$/;
+const rSnapshot = /-SNAPSHOT((\.|-)\d+)?$/;
 
 const fnLoadPackage = function(filePath) {
     return JSON.parse(fs.readFileSync(filePath, {encoding: 'utf8'}));
@@ -16,9 +16,21 @@ const fnEndsWithSnapshot = function(str) {
     return str.toUpperCase().replace(rSnapshot, '');
 }
 
+/**
+ * @param str
+ * @returns {*} - the snapshot number.
+ */
+const fnGetSnapshotNumber = function (str) {
+    const match = str.toUpperCase().match(rSnapshot);
+    if(null !== match) {
+        return parseInt((match[1] || '0').replace(/\.|-/, ''));
+    }
+}
+
 exports.snapshotUpdate = function(filePath, log) {
     const fnLog = (typeof log === "function")? log : console.log;
     const package = fnLoadPackage((filePath));
+    const snapshotNumber = fnGetSnapshotNumber(package.version);
     const version = fnEndsWithSnapshot(package.version);
     if(!version) {
         throw new Error("Please suffix your semver with -SNAPSHOT");
@@ -27,7 +39,7 @@ exports.snapshotUpdate = function(filePath, log) {
         throw new Error("Invalid semver in package.");
     }
 
-    package.version = version + '-SNAPSHOT.' + Date.now();
+    package.version = version + '-SNAPSHOT.' + (snapshotNumber + 1);
 
     fs.writeFileSync(filePath, JSON.stringify(package, null, 2));
 
